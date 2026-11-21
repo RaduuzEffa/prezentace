@@ -421,11 +421,8 @@
       pointer-events: none;
     }
 
-    /* Hide desktop "Prezentovat (F)" zoom mode button on iPad / touch devices */
+    /* Touch-friendly HUD button sizing on iPad / touch devices */
     @media (hover: none), (pointer: coarse), (max-width: 1366px) {
-      #btn-fullscreen {
-        display: none !important;
-      }
       .hud-btn {
         font-size: 0.88rem !important;
         padding: 10px 18px !important;
@@ -2604,8 +2601,8 @@
         Prezentovat (F)
       </button>
       <div class="hud-divider"></div>
-      <button class="hud-btn" id="btn-collapse-hud" title="Zasunout horní lištu nahoru, aby nerušila při prezentaci">
-        ▲ Skrýt
+      <button class="hud-btn" id="btn-collapse-hud" title="Zasunout / vysunout horní lištu (Klávesa S)">
+        ▲ Skrýt (S)
       </button>
     </div>
 
@@ -5588,34 +5585,58 @@
       bindReliableTap(document.getElementById('btn-export-pdf'), exportToPDF);
       bindReliableTap(document.getElementById('btn-drawer-pdf'), exportToPDF);
       bindReliableTap(document.getElementById('btn-collapse-hud'), () => {
-        document.body.classList.add('hud-collapsed');
+        document.body.classList.toggle('hud-collapsed');
       });
 
-      bindReliableTap(document.getElementById('btn-fullscreen'), () => {
-        if (document.documentElement.requestFullscreen) {
-          if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {});
+      function getCurrentFullscreenElement() {
+        return document.fullscreenElement || document.webkitFullscreenElement || null;
+      }
+
+      function toggleNativeFullscreen() {
+        const docEl = document.documentElement;
+        const reqFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+        const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+
+        if (reqFs) {
+          if (!getCurrentFullscreenElement()) {
+            try {
+              const p = reqFs.call(docEl);
+              if (p && p.catch) p.catch(() => {});
+            } catch (err) {}
             document.body.classList.add('presenting-clean');
             document.body.classList.add('hud-collapsed');
           } else {
-            document.exitFullscreen().catch(() => {});
+            if (exitFs) {
+              try {
+                const p = exitFs.call(document);
+                if (p && p.catch) p.catch(() => {});
+              } catch (err) {}
+            }
             document.body.classList.remove('presenting-clean');
             document.body.classList.remove('hud-collapsed');
           }
         } else {
-          document.body.classList.toggle('hud-collapsed');
+          const isClean = document.body.classList.toggle('presenting-clean');
+          document.body.classList.toggle('hud-collapsed', isClean);
         }
         setTimeout(updateDealtDeckBoxPosition, 300);
-      });
+      }
+
+      bindReliableTap(document.getElementById('btn-fullscreen'), toggleNativeFullscreen);
 
       window.addEventListener('orientationchange', () => {
         setTimeout(updateDealtDeckBoxPosition, 250);
       });
 
-      document.addEventListener('fullscreenchange', () => {
-        document.body.classList.toggle('presenting-clean', Boolean(document.fullscreenElement));
+      const onFsChange = () => {
+        const fsActive = Boolean(getCurrentFullscreenElement());
+        document.body.classList.toggle('presenting-clean', fsActive);
+        const btnFs = document.getElementById('btn-fullscreen');
+        if (btnFs) btnFs.classList.toggle('active', fsActive);
         setTimeout(updateDealtDeckBoxPosition, 300);
-      });
+      };
+      document.addEventListener('fullscreenchange', onFsChange);
+      document.addEventListener('webkitfullscreenchange', onFsChange);
 
       // Smooth Mouse Wheel & Trackpad Scrollytelling
       let lastWheelActionTime = 0;
@@ -5942,9 +5963,12 @@
           const isOpen = drawer.classList.toggle('open');
           if (isOpen) syncStudioEditorFields();
         } else if (e.key.toLowerCase() === 'f') {
-          document.getElementById('btn-fullscreen').click();
+          toggleNativeFullscreen();
+        } else if (e.key.toLowerCase() === 's') {
+          document.body.classList.toggle('hud-collapsed');
         } else if (e.key.toLowerCase() === 'l') {
-          document.getElementById('btn-toggle-laser').click();
+          const nextState = !document.body.classList.contains('laser-active');
+          setLaserActiveState(nextState);
         } else if (/^[1-9]$/.test(e.key)) {
           const idx = parseInt(e.key, 10) - 1;
           const s = appState.slides[currentSlideIndex];
