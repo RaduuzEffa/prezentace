@@ -699,7 +699,7 @@
        ========================================== */
     #main-stage {
       position: absolute;
-      inset: 120px 0 135px 0;
+      inset: 84px 0 168px 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -997,64 +997,10 @@
     }
 
     /* ==========================================
-       6. ANIMATED SVG NEON BLUE LEADER LINE
+       6. ANIMATED SVG NEON BLUE LEADER LINE (REMOVED PER USER REQUEST)
        ========================================== */
     #leader-svg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 25;
-      overflow: visible;
-    }
-
-    .leader-path-glow {
-      fill: none;
-      stroke: var(--line-color);
-      stroke-width: 4.5;
-      filter: blur(6px);
-      opacity: 0;
-      stroke-dasharray: 480;
-      stroke-dashoffset: 480;
-      transition: none;
-    }
-
-    .leader-path-line {
-      fill: none;
-      stroke: var(--line-color);
-      stroke-width: 2;
-      opacity: 0;
-      stroke-dasharray: 480;
-      stroke-dashoffset: 480;
-      transition: none;
-    }
-
-    .leader-node {
-      fill: var(--line-color);
-      opacity: 0;
-      transform-origin: center;
-      transition: none;
-      filter: drop-shadow(0 0 10px var(--line-color));
-    }
-
-    #main-stage.panel-active .leader-path-glow {
-      stroke-dashoffset: 0;
-      opacity: 0.65;
-      transition:
-        stroke-dashoffset calc(0.7s / var(--anim-speed)) cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 0.2s ease;
-    }
-    #main-stage.panel-active .leader-path-line {
-      stroke-dashoffset: 0;
-      opacity: 1;
-      transition:
-        stroke-dashoffset calc(0.7s / var(--anim-speed)) cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 0.2s ease;
-    }
-    #main-stage.panel-active .leader-node {
-      opacity: 1;
-      transition: opacity 0.35s ease;
+      display: none !important;
     }
 
     /* ==========================================
@@ -2205,6 +2151,9 @@
 
     /* Responsive layout for iPad Landscape (1024px - 1366px) */
     @media (max-width: 1366px) {
+      #main-stage {
+        inset: 74px 0 165px 0;
+      }
       .stage-inner {
         width: min(1140px, 86vw);
         grid-template-columns: 310px 1fr;
@@ -2284,7 +2233,7 @@
         font-size: clamp(0.95rem, 3.4vw, 1.12rem);
       }
       #main-stage {
-        inset: 96px 0 120px 0;
+        inset: 78px 0 138px 0;
       }
       .stage-inner {
         grid-template-columns: 1fr;
@@ -2412,14 +2361,6 @@
          ========================================== -->
     <main id="main-stage">
       <div class="stage-inner" id="stage-inner">
-
-        <!-- Animated SVG Neon Blue Circuit Leader Line (Card -> Detail Panel) -->
-        <svg id="leader-svg" viewBox="0 0 1420 620" preserveAspectRatio="none">
-          <path id="leader-glow" class="leader-path-glow" d="M 390 235 L 452 175 L 518 175" />
-          <path id="leader-line" class="leader-path-line" d="M 390 235 L 452 175 L 518 175" />
-          <circle id="leader-node-start" class="leader-node" cx="390" cy="235" r="5" />
-          <circle id="leader-node-end" class="leader-node" cx="518" cy="175" r="5" />
-        </svg>
 
         <!-- LEFT: 3D LIFTED & FLIPPING PLAYING CARD -->
         <div class="hero-card-scene" id="hero-card-scene">
