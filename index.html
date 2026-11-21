@@ -118,6 +118,8 @@
       color: var(--panel-text);
       font-family: var(--font-body);
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
       transition: background-color 0.35s ease, color 0.35s ease;
     }
 
@@ -419,51 +421,6 @@
       pointer-events: none;
     }
 
-    /* Prominent, touch-friendly top pull-down handle when the top control bar is slid up */
-    #hud-pull-tab {
-      position: fixed;
-      top: 0;
-      left: 50%;
-      transform: translate3d(-50%, -130%, 0);
-      z-index: 119;
-      background: rgba(6, 12, 24, 0.9);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1.5px solid var(--accent);
-      border-top: none;
-      color: var(--accent);
-      font-family: var(--font-body);
-      font-size: 0.84rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      padding: 10px 28px 11px 28px;
-      min-height: 42px;
-      border-radius: 0 0 18px 18px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-      cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
-      touch-action: manipulation;
-      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease, background-color 0.2s ease;
-    }
-
-    body[data-theme-mode="light"] #hud-pull-tab {
-      background: rgba(255, 255, 255, 0.95);
-      border-color: var(--accent);
-    }
-
-    body.hud-collapsed #hud-pull-tab {
-      transform: translate3d(-50%, 0, 0);
-      opacity: 0.96;
-      pointer-events: auto;
-    }
-
-    body.hud-collapsed #hud-pull-tab:hover,
-    body.hud-collapsed #hud-pull-tab:active {
-      opacity: 1;
-      background: var(--accent-soft);
-    }
-
     /* Hide desktop "Prezentovat (F)" zoom mode button on iPad / touch devices */
     @media (hover: none), (pointer: coarse), (max-width: 1366px) {
       #btn-fullscreen {
@@ -473,11 +430,6 @@
         font-size: 0.88rem !important;
         padding: 10px 18px !important;
         min-height: 44px;
-      }
-      #hud-pull-tab {
-        font-size: 0.88rem;
-        padding: 11px 34px 12px 34px;
-        min-height: 46px;
       }
     }
 
@@ -526,34 +478,6 @@
       border-color: #ff6b00;
       color: #ff9a3c;
       box-shadow: 0 0 18px rgba(255, 107, 0, 0.45);
-    }
-
-    /* Always-visible floating "Vypnout laser" pill when laser is active */
-    #btn-laser-quick-off {
-      position: fixed;
-      top: 16px;
-      right: 165px;
-      z-index: 125;
-      background: rgba(255, 107, 0, 0.92);
-      border: 1.5px solid #ffd2a8;
-      color: #ffffff;
-      font-family: var(--font-body);
-      font-size: 0.84rem;
-      font-weight: 700;
-      padding: 9px 18px;
-      min-height: 42px;
-      border-radius: 999px;
-      box-shadow: 0 8px 25px rgba(255, 107, 0, 0.55);
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      gap: 6px;
-      touch-action: manipulation;
-      pointer-events: auto;
-    }
-
-    body.laser-active #btn-laser-quick-off {
-      display: inline-flex;
     }
 
     .hud-divider {
@@ -2655,16 +2579,6 @@
       <div class="modal-body-content" id="pdf-modal-stage"></div>
     </div>
   </div>
-
-  <!-- Pull-down tab to expand the top control bar when collapsed -->
-  <button type="button" id="hud-pull-tab" title="Stáhnout / zobrazit horní ovládací lištu">
-    ▼ Lišta
-  </button>
-
-  <!-- Floating one-tap button to turn off Laser immediately on iPad even when HUD is collapsed -->
-  <button type="button" id="btn-laser-quick-off" title="Vypnout laserové ukazovátko">
-    ✕ Vypnout laser
-  </button>
 
   <!-- TOP MINIMALIST HUD BAR -->
   <header id="top-hud">
@@ -5657,15 +5571,11 @@
         const btnLaser = document.getElementById('btn-toggle-laser');
         document.body.classList.toggle('laser-active', active);
         btnLaser.classList.toggle('active', active);
-        btnLaser.textContent = active ? '🟠 Laser: ZAP (Vypnout)' : '🟠 Laser';
       }
 
       bindReliableTap(document.getElementById('btn-toggle-laser'), () => {
         const nextState = !document.body.classList.contains('laser-active');
         setLaserActiveState(nextState);
-      });
-      bindReliableTap(document.getElementById('btn-laser-quick-off'), () => {
-        setLaserActiveState(false);
       });
       bindReliableTap(document.getElementById('btn-open-studio'), () => {
         const drawer = document.getElementById('studio-drawer');
@@ -5679,9 +5589,6 @@
       bindReliableTap(document.getElementById('btn-drawer-pdf'), exportToPDF);
       bindReliableTap(document.getElementById('btn-collapse-hud'), () => {
         document.body.classList.add('hud-collapsed');
-      });
-      bindReliableTap(document.getElementById('hud-pull-tab'), () => {
-        document.body.classList.remove('hud-collapsed');
       });
 
       bindReliableTap(document.getElementById('btn-fullscreen'), () => {
@@ -5757,22 +5664,71 @@
         }
       }, { passive: true });
 
-      // Unified iPad / Tablet / iPhone Finger & Stylus (Apple Pencil / S-Pen) Swipe Gestures
+      // Unified iPad / Tablet / iPhone Finger & Stylus (Apple Pencil / S-Pen) Swipe + Long-Press Laser Gestures
       let gestureStartX = 0;
       let gestureStartY = 0;
       let gestureStartTime = 0;
       let ignoreCurrentGesture = false;
       let lastSwipeActionTime = 0;
+      let laserLongPressTimer = null;
+      let laserLongPressStartX = 0;
+      let laserLongPressStartY = 0;
+
+      function cancelLaserLongPress() {
+        if (laserLongPressTimer) {
+          clearTimeout(laserLongPressTimer);
+          laserLongPressTimer = null;
+        }
+      }
+
+      function isBackgroundSurfaceTarget(target) {
+        if (!target) return false;
+        const tag = (target.tagName || '').toUpperCase();
+        if (
+          tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON' ||
+          tag === 'A' || tag === 'H1' || tag === 'H2' || tag === 'H3' || tag === 'P' ||
+          tag === 'LI' || tag === 'SPAN' || tag === 'STRONG' || tag === 'LABEL'
+        ) {
+          return false;
+        }
+        if (
+          target.closest &&
+          target.closest(
+            '#detail-panel, #intro-deck-panel, #hero-card-scene, #deck-holder-wrap, #hud-controls, #bottom-card-tray, #right-media-dock, #studio-drawer, .designer-modal-window, .brand-cluster, .slide-counter, button, a'
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+
+      function startLaserLongPressCheck(clientX, clientY, target) {
+        cancelLaserLongPress();
+        if (!isBackgroundSurfaceTarget(target)) return;
+        laserLongPressStartX = clientX;
+        laserLongPressStartY = clientY;
+        laserLongPressTimer = setTimeout(() => {
+          laserLongPressTimer = null;
+          const nextState = !document.body.classList.contains('laser-active');
+          setLaserActiveState(nextState);
+          if (nextState) {
+            const laser = document.getElementById('laser-dot');
+            laser.style.left = `${clientX}px`;
+            laser.style.top = `${clientY}px`;
+          }
+        }, 1600); // ~1.6-2 seconds long press on empty desk surface toggles laser on/off
+      }
 
       function onGestureStart(clientX, clientY, target) {
         const drawer = document.getElementById('studio-drawer');
         const bottomTray = document.getElementById('bottom-card-tray');
         const hudControls = document.getElementById('hud-controls');
-        const hudPullTab = document.getElementById('hud-pull-tab');
         const tag = (target && target.tagName) || '';
 
-        // Always allow vertical swipe on top HUD bar / pull tab so user can slide it up or down easily
-        const isOnHudBar = (hudControls && hudControls.contains(target)) || (hudPullTab && hudPullTab.contains(target));
+        // Always allow vertical swipe on top HUD bar so user can slide it up or down easily
+        const isOnHudBar = Boolean(hudControls && hudControls.contains(target));
+
+        startLaserLongPressCheck(clientX, clientY, target);
 
         if (
           !isOnHudBar && (
@@ -5799,6 +5755,7 @@
       }
 
       function onGestureEnd(clientX, clientY) {
+        cancelLaserLongPress();
         if (ignoreCurrentGesture) return;
         const now = performance.now();
         if (now - lastSwipeActionTime < 220) return;
@@ -5813,15 +5770,15 @@
         if (Math.max(absX, absY) < 24) return; // Short tap is handled by bindReliableTap
 
         // 0. Pull-down / Slide-up Top HUD Bar gesture on iPad / iPhone:
-        //    Swiping down from the top 110px edge pulls down the top control bar;
-        //    Swiping up from the top 120px zone slides the top control bar up!
+        //    Swiping down from the top 130px edge pulls down the top control bar;
+        //    Swiping up from the top 130px zone slides the top control bar up!
         if (absY > absX) {
-          if (gestureStartY < 110 && dy > 20 && document.body.classList.contains('hud-collapsed')) {
+          if (gestureStartY < 130 && dy > 20 && document.body.classList.contains('hud-collapsed')) {
             lastSwipeActionTime = now;
             document.body.classList.remove('hud-collapsed');
             return;
           }
-          if (gestureStartY < 120 && dy < -20 && !document.body.classList.contains('hud-collapsed')) {
+          if (gestureStartY < 130 && dy < -20 && !document.body.classList.contains('hud-collapsed')) {
             lastSwipeActionTime = now;
             document.body.classList.add('hud-collapsed');
             return;
@@ -5888,10 +5845,15 @@
       }, { passive: true });
 
       window.addEventListener('pointermove', (e) => {
-        if ((e.pointerType === 'pen' || e.pointerType === 'touch') && document.body.classList.contains('laser-active')) {
-          const laser = document.getElementById('laser-dot');
-          laser.style.left = `${e.clientX}px`;
-          laser.style.top = `${e.clientY}px`;
+        if (e.pointerType === 'pen' || e.pointerType === 'touch') {
+          if (laserLongPressTimer && (Math.abs(e.clientX - laserLongPressStartX) > 22 || Math.abs(e.clientY - laserLongPressStartY) > 22)) {
+            cancelLaserLongPress();
+          }
+          if (document.body.classList.contains('laser-active')) {
+            const laser = document.getElementById('laser-dot');
+            laser.style.left = `${e.clientX}px`;
+            laser.style.top = `${e.clientY}px`;
+          }
         }
       }, { passive: true });
 
@@ -5901,8 +5863,11 @@
         }
       }, { passive: true });
 
+      window.addEventListener('pointercancel', cancelLaserLongPress, { passive: true });
+
       window.addEventListener('touchstart', (e) => {
         if (!e.touches || e.touches.length !== 1) {
+          cancelLaserLongPress();
           ignoreCurrentGesture = true;
           return;
         }
@@ -5911,10 +5876,15 @@
 
       window.addEventListener('touchmove', (e) => {
         if (!e.touches || !e.touches.length) return;
+        const tx = e.touches[0].clientX;
+        const ty = e.touches[0].clientY;
+        if (laserLongPressTimer && (Math.abs(tx - laserLongPressStartX) > 22 || Math.abs(ty - laserLongPressStartY) > 22)) {
+          cancelLaserLongPress();
+        }
         if (document.body.classList.contains('laser-active')) {
           const laser = document.getElementById('laser-dot');
-          laser.style.left = `${e.touches[0].clientX}px`;
-          laser.style.top = `${e.touches[0].clientY}px`;
+          laser.style.left = `${tx}px`;
+          laser.style.top = `${ty}px`;
         }
       }, { passive: true });
 
@@ -5922,6 +5892,8 @@
         if (!e.changedTouches || !e.changedTouches.length) return;
         onGestureEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
       }, { passive: true });
+
+      window.addEventListener('touchcancel', cancelLaserLongPress, { passive: true });
 
       // Keyboard navigation
       window.addEventListener('keydown', (e) => {

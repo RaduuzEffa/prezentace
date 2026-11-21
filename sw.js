@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wow-deck-studio-v4';
+const CACHE_NAME = 'wow-deck-studio-v5';
 const ASSETS = [
   './',
   './index.html',
